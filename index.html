@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="GA4 Insights Dashboard powered by Gemini 2.5 Flash">
+    <title>AI GA4 Insights Dashboard</title>
+    <!-- Modern Typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- SVG Icons Placeholder from Phosphor (lightweight) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="dashboard-wrapper">
+        <header class="header">
+            <div class="logo-container">
+                <i class="ph ph-chart-line-up logo-icon"></i>
+                <h1>GA4 AI Automation</h1>
+            </div>
+            <div class="header-right">
+                <span class="status-indicator">
+                    <span class="dot"></span>Live Data
+                </span>
+                <button id="refreshDataBtn" class="refresh-btn">
+                    <i class="ph ph-arrows-clockwise"></i> Refresh Insights
+                </button>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <!-- Loading State -->
+            <div id="loadingOverlay" class="loading-overlay hidden">
+                <div class="spinner"></div>
+                <p>Gemini is analyzing your data...</p>
+            </div>
+
+            <!-- Insights Section (Gemini) -->
+            <section class="ai-section">
+                <div class="card ai-card conclusions glass-panel">
+                    <div class="card-header">
+                        <i class="ph ph-brain"></i>
+                        <h2>AI Conclusions</h2>
+                    </div>
+                    <ul id="conclusionsList" class="insight-list">
+                        <li class="skeleton"></li>
+                        <li class="skeleton"></li>
+                        <li class="skeleton"></li>
+                    </ul>
+                </div>
+
+                <div class="card ai-card recommendations glass-panel">
+                    <div class="card-header">
+                        <i class="ph ph-lightbulb"></i>
+                        <h2>Actionable Recommendations</h2>
+                    </div>
+                    <ul id="recommendationsList" class="insight-list">
+                        <li class="skeleton"></li>
+                        <li class="skeleton"></li>
+                        <li class="skeleton"></li>
+                    </ul>
+                </div>
+            </section>
+
+            <div class="divider">
+                <span>Core GA4 Metrics</span>
+            </div>
+
+            <!-- Metrics Grid -->
+            <section class="metrics-grid">
+                
+                <div class="metric-card glass-panel" id="metric-conversion">
+                    <span class="metric-title">Session Conversion Rate</span>
+                    <h3 class="metric-value">--</h3>
+                    <div class="icon-bg"><i class="ph ph-trend-up"></i></div>
+                </div>
+
+                <div class="metric-card glass-panel" id="metric-dropoff">
+                    <span class="metric-title">Test Drop-off Rate</span>
+                    <h3 class="metric-value">--</h3>
+                    <div class="icon-bg"><i class="ph ph-chart-line-down"></i></div>
+                </div>
+
+                <div class="metric-card glass-panel" id="metric-cpa">
+                    <span class="metric-title">Ads Cost Per Conv.</span>
+                    <h3 class="metric-value">--</h3>
+                    <div class="icon-bg"><i class="ph ph-currency-dollar"></i></div>
+                </div>
+
+                <div class="metric-card glass-panel" id="metric-engagement-time">
+                    <span class="metric-title">Avg. Engagement Time</span>
+                    <h3 class="metric-value">--</h3>
+                    <div class="icon-bg"><i class="ph ph-clock"></i></div>
+                </div>
+
+                <div class="metric-card glass-panel" id="metric-lead-forms">
+                    <span class="metric-title">Lead Forms Submitted</span>
+                    <h3 class="metric-value">--</h3>
+                    <div class="icon-bg"><i class="ph ph-envelope-simple"></i></div>
+                </div>
+
+                <div class="metric-card glass-panel" id="metric-top-campaign">
+                    <span class="metric-title">Top Ad Campaign</span>
+                    <h3 class="metric-value text-small">--</h3>
+                    <div class="icon-bg"><i class="ph ph-megaphone"></i></div>
+                </div>
+
+                <div class="metric-card glass-panel" id="metric-source">
+                    <span class="metric-title">Top Source/Medium</span>
+                    <h3 class="metric-value text-small">--</h3>
+                    <div class="icon-bg"><i class="ph ph-users-three"></i></div>
+                </div>
+
+                <div class="metric-card glass-panel" id="metric-engagement-rate">
+                    <span class="metric-title">Engagement Rate</span>
+                    <h3 class="metric-value">--</h3>
+                    <div class="icon-bg"><i class="ph ph-activity"></i></div>
+                </div>
+
+                <div class="metric-card glass-panel" id="metric-device">
+                    <span class="metric-title">Top Device</span>
+                    <h3 class="metric-value">--</h3>
+                    <div class="icon-bg"><i class="ph ph-device-mobile"></i></div>
+                </div>
+
+                <div class="metric-card glass-panel" id="metric-returning">
+                    <span class="metric-title">Returning User Rate</span>
+                    <h3 class="metric-value">--</h3>
+                    <div class="icon-bg"><i class="ph ph-arrow-u-up-left"></i></div>
+                </div>
+
+            </section>
+        </main>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
