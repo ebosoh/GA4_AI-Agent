@@ -10,7 +10,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
     <!-- SVG Icons Placeholder from Phosphor (lightweight) -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <link rel="stylesheet" href="styles.css">
+    <? if (typeof HtmlService !== 'undefined') { ?>
+        <style>
+            <?!= include('styles.css'); ?>
+        </style>
+    <? } else { ?>
+        <link rel="stylesheet" href="styles.css">
+    <? } ?>
 </head>
 
 <body>
@@ -165,7 +171,13 @@
         </main>
     </div>
 
-    <script src="app.js"></script>
+    <? if (typeof HtmlService !== 'undefined') { ?>
+        <script>
+            <?!= include('app.js'); ?>
+        </script>
+    <? } else { ?>
+        <script src="app.js"></script>
+    <? } ?>
 </body>
 
 </html>

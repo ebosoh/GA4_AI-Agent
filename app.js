@@ -42,7 +42,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Build URL dynamically
         let fetchUrl = GAS_WEBAPP_URL;
-        const params = [];
+        const params = ["api=true"]; // Signal backend to return JSON API response instead of UI HTML
         if (propertyId) params.push(`propertyId=${encodeURIComponent(propertyId)}`);
         if (question) params.push(`question=${encodeURIComponent(question)}`);
         if (params.length > 0) {
