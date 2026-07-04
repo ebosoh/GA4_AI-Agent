@@ -327,3 +327,107 @@ h1 {
         align-items: flex-start;
     }
 }
+
+/* Configuration & Query Panel */
+.config-section {
+    margin-bottom: 2.5rem;
+    padding: 1.75rem 2rem;
+    border-color: rgba(99, 102, 241, 0.15);
+}
+
+.config-grid {
+    display: grid;
+    grid-template-columns: 1fr 2fr auto;
+    gap: 1.5rem;
+    align-items: flex-end;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.input-group label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.input-group label i {
+    color: var(--accent-secondary);
+}
+
+.input-group input {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    color: var(--text-main);
+    font-family: inherit;
+    font-size: 0.95rem;
+    transition: all 0.2s ease-in-out;
+}
+
+.input-group input:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 10px rgba(99, 102, 241, 0.25);
+    background: rgba(15, 23, 42, 0.8);
+}
+
+/* AI Answer Card */
+.answer-section {
+    margin-bottom: 3rem;
+    display: block;
+}
+
+.answer-card {
+    border: 1px solid rgba(14, 165, 233, 0.3);
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.5), rgba(14, 165, 233, 0.05));
+    box-shadow: 0 0 25px rgba(14, 165, 233, 0.15);
+    padding: 2rem;
+    transition: all 0.3s ease;
+}
+
+.answer-card:hover {
+    box-shadow: 0 0 35px rgba(14, 165, 233, 0.25);
+    border-color: rgba(14, 165, 233, 0.5);
+}
+
+.answer-content {
+    font-size: 1.15rem;
+    line-height: 1.7;
+    color: var(--text-main);
+    border-left: 3px solid var(--accent-secondary);
+    padding-left: 1.5rem;
+    margin-top: 1rem;
+}
+
+.answer-content p {
+    margin-bottom: 0.75rem;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Adjust config button placement */
+.config-grid .refresh-btn {
+    height: 43px;
+    justify-content: center;
+}
+
+/* Responsive configurations */
+@media (max-width: 900px) {
+    .config-grid {
+        grid-template-columns: 1fr;
+        gap: 1.25rem;
+    }
+    .config-grid .refresh-btn {
+        width: 100%;
+    }
+}

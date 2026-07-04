@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,8 +10,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
     <!-- SVG Icons Placeholder from Phosphor (lightweight) -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
     <div class="dashboard-wrapper">
         <header class="header">
@@ -35,8 +37,38 @@
                 <p>Gemini is analyzing your data...</p>
             </div>
 
+            <!-- Configuration & Query Section -->
+            <section class="config-section glass-panel">
+                <div class="config-grid">
+                    <div class="input-group">
+                        <label for="propertyIdInput"><i class="ph ph-hash"></i> GA4 Property ID</label>
+                        <input type="text" id="propertyIdInput" placeholder="e.g., 431424603" value="431424603">
+                    </div>
+                    <div class="input-group">
+                        <label for="questionInput"><i class="ph ph-question"></i> Ask the AI Agent</label>
+                        <input type="text" id="questionInput" placeholder="e.g., What is the new user sign-up trend? (Leave empty for general audit)">
+                    </div>
+                    <button id="askAgentBtn" class="refresh-btn">
+                        <i class="ph ph-sparkle"></i> Query Agent
+                    </button>
+                </div>
+            </section>
+
+            <!-- Custom AI Answer Section (Hidden by default) -->
+            <section id="answerSection" class="answer-section hidden">
+                <div class="card ai-card answer-card glass-panel">
+                    <div class="card-header">
+                        <i class="ph ph-sparkle"></i>
+                        <h2 id="answerQuestionTitle">AI Agent Answer</h2>
+                    </div>
+                    <div id="answerContent" class="answer-content">
+                        <!-- Dynamic specific answer -->
+                    </div>
+                </div>
+            </section>
+
             <!-- Insights Section (Gemini) -->
-            <section class="ai-section">
+            <section id="generalAiSection" class="ai-section">
                 <div class="card ai-card conclusions glass-panel">
                     <div class="card-header">
                         <i class="ph ph-brain"></i>
@@ -68,7 +100,7 @@
 
             <!-- Metrics Grid -->
             <section class="metrics-grid">
-                
+
                 <div class="metric-card glass-panel" id="metric-conversion">
                     <span class="metric-title">Session Conversion Rate</span>
                     <h3 class="metric-value">--</h3>
@@ -133,6 +165,7 @@
         </main>
     </div>
 
-    <script src="js/app.js"></script>
+    <script src="app.js"></script>
 </body>
+
 </html>
