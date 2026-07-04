@@ -611,11 +611,12 @@ function answerQuestionWithGemini(gaData, question) {
   "Here is the GA4 data (including current totals, previous totals, top pages, traffic channels, and period-over-period percentage growth):\n" +
   JSON.stringify(gaData, null, 2) + "\n\n" +
   "CRITICAL DIRECTIVES:\n" +
-  "1. Answer ONLY the exact question asked. Do NOT include generic instructions or side facts that are not directly answering the user's prompt.\n" +
+  "1. Answer ONLY the exact question asked. Do NOT include generic commentary or side facts that are not related to the user's prompt.\n" +
   "2. You are Google Analytics Advisor, so bring deep diagnostic insights. E.g., if traffic dropped, explain WHICH campaign or source caused it, and compare device categories (mobile vs desktop).\n" +
   "3. Incorporate Period-over-Period (PoP) changes (e.g. 'Sessions grew by +12.4% compared to the previous week, driven by a spike in search traffic') to show trends.\n" +
   "4. Provide a clear attribution for successes or failures (attribute traffic/conversions to specific campaign names or source/mediums) and list the top page views if relevant.\n" +
-  "5. Keep the answer highly focused, clear, and actionable (maximum 2-4 sentences or a concise bullet list). If the data does not contain the answer, respond with: 'The provided GA4 data does not contain the necessary information to answer this question.'";
+  "5. DIAGNOSTIC TROUBLESHOOTING: If the GA4 dataset is empty (all 0s or 'No Data'), or if a specific metric requested (like ad spend or custom events) is missing, do NOT just output a generic error message. Instead, act like a helpful advisor: explain that the property has no recorded traffic/events for this period, and guide the user with clear setup steps (e.g., verifying their Google Tag installation, checking if their Google Ads account is linked, or confirming if custom events like 'test_start' are configured in their GA4 Admin panel).\n" +
+  "6. Keep the response highly focused, clear, and actionable (maximum 2-4 sentences or a concise bullet list).";
 
   var payload = {
     contents: [{
