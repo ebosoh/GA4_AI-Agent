@@ -31,8 +31,23 @@ function doGet(e) {
       
       var aiInsights;
       if (question) {
-        // Call Gemini for a specific, concise answer to the user's question
-        var answerText = answerQuestionWithGemini(parsedData, question);
+        var customReportData = null;
+        var generatedQuery = null;
+
+        // 1. Dynamically generate a custom GA4 Data API request based on the user's question
+        try {
+          generatedQuery = generateGA4RequestWithGemini(question);
+          if (generatedQuery && !generatedQuery.error) {
+            // Run the custom query against the GA4 property
+            var customReport = AnalyticsData.Properties.runReport(generatedQuery, propertyId);
+            customReportData = parseReportRows(customReport);
+          }
+        } catch (queryErr) {
+          console.warn("Failed to generate or run custom dynamic query: " + queryErr.toString());
+        }
+
+        // 2. Call Gemini to answer the question using both general parsedData and custom report data
+        var answerText = answerQuestionWithGemini(parsedData, question, customReportData, generatedQuery);
         aiInsights = {
           question: question,
           answer: answerText
@@ -450,6 +465,56 @@ function processGA4Data(reports) {
 }
 
 /**
+ * Uses Gemini to translate user's question into a clean, valid GA4 Data API JSON query configuration
+ */
+function generateGA4RequestWithGemini(question) {
+  if (GEMINI_API_KEY === 'INSERT_YOUR_GEMINI_API_KEY_HERE') {
+    return { error: true, message: "Missing API Key" };
+  }
+
+  var url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + GEMINI_API_KEY;
+
+  var prompt = "You are a specialized compiler that translates user natural language questions into Google Analytics 4 (GA4) runReport query payloads.\n" +
+  "Given the user's question: \"" + question + "\"\n\n" +
+  "Produce a valid, syntax-compliant GA4 Data API report request config as a JSON object.\n" +
+  "You MUST follow these rules:\n" +
+  "1. Only use standard dimensions (e.g. 'deviceCategory', 'country', 'city', 'pagePath', 'sessionSourceMedium', 'sessionCampaignName', 'eventName', 'date').\n" +
+  "2. Only use standard metrics (e.g. 'activeUsers', 'newUsers', 'sessions', 'screenPageViews', 'conversions', 'eventCount', 'averageSessionDuration', 'bounceRate', 'engagementRate', 'sessionConversionRate').\n" +
+  "3. Format dateRanges as standard strings: [{ 'startDate': '7daysAgo', 'endDate': 'today' }] or choose appropriate bounds if the user mentions time. Default to 7daysAgo to today.\n" +
+  "4. Do NOT group incompatible dimensions or metrics (like advertiserAdCost with user-scoped dimensions) to prevent API errors.\n" +
+  "5. If filtering is needed (e.g. a specific page path or event name), add a valid 'dimensionFilter' or 'metricFilter' object structure.\n" +
+  "6. Output EXACTLY a single JSON object. Do not include markdown code block formatting (like ```json), commentary, or extra brackets. Just pure JSON.";
+
+  var payload = {
+    contents: [{
+      parts: [{ text: prompt }]
+    }],
+    generationConfig: {
+      temperature: 0.1,
+      responseMimeType: "application/json"
+    }
+  };
+
+  var options = {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+
+  try {
+    var response = UrlFetchApp.fetch(url, options);
+    var result = JSON.parse(response.getContentText());
+    if (result.error) throw new Error(result.error.message);
+    var aiText = result.candidates[0].content.parts[0].text.trim();
+    return JSON.parse(aiText);
+  } catch (err) {
+    console.error("Failed to generate GA4 request config: " + err.message);
+    return { error: true, message: err.message };
+  }
+}
+
+/**
  * Fetches insights from Gemini 2.5 Flash API
  */
 function analyzeWithGemini(gaData) {
@@ -598,7 +663,7 @@ function _getFallbackData() {
 /**
  * Fetches specific concise answers from Gemini for a custom question
  */
-function answerQuestionWithGemini(gaData, question) {
+function answerQuestionWithGemini(gaData, question, customReportData, generatedQuery) {
   if (GEMINI_API_KEY === 'INSERT_YOUR_GEMINI_API_KEY_HERE') {
     return "Gemini API Key missing. Please configure GEMINI_API_KEY in the Apps Script.";
   }
@@ -608,14 +673,19 @@ function answerQuestionWithGemini(gaData, question) {
   var prompt = "You are Google Analytics Intelligence (Ask Advisor), a world-class GA4 senior web analyst and growth advisor.\n" +
   "The user has asked the following specific question about their GA4 data:\n" +
   "\"" + question + "\"\n\n" +
-  "Here is the GA4 data (including current totals, previous totals, top pages, traffic channels, and period-over-period percentage growth):\n" +
+  "To help you answer, we ran a dynamically generated GA4 Data API query tailored to their question.\n" +
+  "Dynamic Query Configuration Used:\n" +
+  JSON.stringify(generatedQuery, null, 2) + "\n\n" +
+  "Dynamically Retrieved GA4 Dataset:\n" +
+  JSON.stringify(customReportData, null, 2) + "\n\n" +
+  "Standard Dashboard Overview Metrics (use if needed for context/comparison):\n" +
   JSON.stringify(gaData, null, 2) + "\n\n" +
   "CRITICAL DIRECTIVES:\n" +
-  "1. Answer ONLY the exact question asked. Do NOT include generic commentary or side facts that are not related to the user's prompt.\n" +
-  "2. You are Google Analytics Advisor, so bring deep diagnostic insights. E.g., if traffic dropped, explain WHICH campaign or source caused it, and compare device categories (mobile vs desktop).\n" +
-  "3. Incorporate Period-over-Period (PoP) changes (e.g. 'Sessions grew by +12.4% compared to the previous week, driven by a spike in search traffic') to show trends.\n" +
-  "4. Provide a clear attribution for successes or failures (attribute traffic/conversions to specific campaign names or source/mediums) and list the top page views if relevant.\n" +
-  "5. DIAGNOSTIC TROUBLESHOOTING: If the GA4 dataset is empty (all 0s or 'No Data'), or if a specific metric requested (like ad spend or custom events) is missing, do NOT just output a generic error message. Instead, act like a helpful advisor: explain that the property has no recorded traffic/events for this period, and guide the user with clear setup steps (e.g., verifying their Google Tag installation, checking if their Google Ads account is linked, or confirming if custom events like 'test_start' are configured in their GA4 Admin panel).\n" +
+  "1. Answer ONLY the exact question asked using the custom query data and general metrics. Do NOT include unrelated commentary or recommendations.\n" +
+  "2. You are Google Analytics Advisor, so bring deep diagnostic insights. Reference exact numbers (active users, sessions, conversions, pageviews, event counts) returned in the custom query data.\n" +
+  "3. Incorporate Period-over-Period (PoP) comparisons (e.g. sessions/conversions growth compared to the previous period) from the standard metrics if helpful to show weekly performance trends.\n" +
+  "4. Provide attribution for trends: tie traffic shifts to specific landing pages, device categories, or traffic source channels.\n" +
+  "5. DIAGNOSTIC TROUBLESHOOTING: If the custom dataset is empty (all 0s or empty arrays), do NOT just say 'no data'. Explain that the specific metric/dimension is currently not tracking in their GA4 property and guide them with quick instructions on how to set it up (e.g., verifying tag configuration, linking ads, or setting up custom conversion events).\n" +
   "6. Keep the response highly focused, clear, and actionable (maximum 2-4 sentences or a concise bullet list).";
 
   var payload = {
