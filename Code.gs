@@ -108,112 +108,152 @@ function parseReportRows(report) {
 }
 
 /**
- * Queries GA4 using multiple robust requests to retrieve all key metrics and dimensions
+ * Queries GA4 using Period-over-Period date ranges and top pages breakdown
  */
 function fetchGA4Data(propertyId) {
   var targetPropertyId = propertyId || GA4_PROPERTY_ID;
-  var startDate = '7daysAgo';
-  var endDate = 'today';
+  
+  var currentStart = '7daysAgo';
+  var currentEnd = 'today';
+  var previousStart = '15daysAgo';
+  var previousEnd = '8daysAgo';
   
   var reports = {};
 
-  // 1. General Traffic, Engagement, and Device split
-  try {
-    reports.general = AnalyticsData.Properties.runReport({
-      dateRanges: [{ startDate: startDate, endDate: endDate }],
-      dimensions: [{ name: 'deviceCategory' }],
-      metrics: [
-        { name: 'activeUsers' },
-        { name: 'newUsers' },
-        { name: 'sessions' },
-        { name: 'screenPageViews' },
-        { name: 'bounceRate' },
-        { name: 'engagementRate' },
-        { name: 'averageSessionDuration' },
-        { name: 'sessionConversionRate' }
-      ]
-    }, targetPropertyId);
-  } catch (error) {
-    console.warn("Failed to fetch general metrics: " + error.message);
+  // Safe executor to run reports and return null on API error
+  function runReportSafe(config) {
+    try {
+      return AnalyticsData.Properties.runReport(config, targetPropertyId);
+    } catch (e) {
+      console.warn("AnalyticsData API warning: " + e.message);
+      return null;
+    }
   }
 
-  // 2. Acquisition Traffic by Campaign and Source/Medium
-  try {
-    reports.trafficSources = AnalyticsData.Properties.runReport({
-      dateRanges: [{ startDate: startDate, endDate: endDate }],
-      dimensions: [
-        { name: 'sessionSourceMedium' },
-        { name: 'sessionCampaignName' }
-      ],
-      metrics: [
-        { name: 'sessions' },
-        { name: 'activeUsers' },
-        { name: 'conversions' }
-      ]
-    }, targetPropertyId);
-  } catch (error) {
-    console.warn("Failed to fetch traffic sources: " + error.message);
-  }
+  // 1. General traffic (current period)
+  reports.general_current = runReportSafe({
+    dateRanges: [{ startDate: currentStart, endDate: currentEnd }],
+    dimensions: [{ name: 'deviceCategory' }],
+    metrics: [
+      { name: 'activeUsers' },
+      { name: 'newUsers' },
+      { name: 'sessions' },
+      { name: 'screenPageViews' },
+      { name: 'bounceRate' },
+      { name: 'engagementRate' },
+      { name: 'averageSessionDuration' },
+      { name: 'sessionConversionRate' }
+    ]
+  });
 
-  // 3. Event Counts for custom events (test drop-offs, leads)
-  try {
-    reports.events = AnalyticsData.Properties.runReport({
-      dateRanges: [{ startDate: startDate, endDate: endDate }],
-      dimensions: [{ name: 'eventName' }],
-      metrics: [{ name: 'eventCount' }]
-    }, targetPropertyId);
-  } catch (error) {
-    console.warn("Failed to fetch event metrics: " + error.message);
-  }
+  // 2. General traffic (previous period for PoP comparison)
+  reports.general_previous = runReportSafe({
+    dateRanges: [{ startDate: previousStart, endDate: previousEnd }],
+    dimensions: [{ name: 'deviceCategory' }],
+    metrics: [
+      { name: 'activeUsers' },
+      { name: 'newUsers' },
+      { name: 'sessions' },
+      { name: 'screenPageViews' },
+      { name: 'bounceRate' },
+      { name: 'engagementRate' },
+      { name: 'averageSessionDuration' },
+      { name: 'sessionConversionRate' }
+    ]
+  });
 
-  // 4. Geographical Data
-  try {
-    reports.geo = AnalyticsData.Properties.runReport({
-      dateRanges: [{ startDate: startDate, endDate: endDate }],
-      dimensions: [{ name: 'country' }],
-      metrics: [
-        { name: 'activeUsers' },
-        { name: 'sessions' }
-      ]
-    }, targetPropertyId);
-  } catch (error) {
-    console.warn("Failed to fetch geographical metrics: " + error.message);
-  }
+  // 3. Acquisition channels (current period)
+  reports.traffic_current = runReportSafe({
+    dateRanges: [{ startDate: currentStart, endDate: currentEnd }],
+    dimensions: [
+      { name: 'sessionSourceMedium' },
+      { name: 'sessionCampaignName' }
+    ],
+    metrics: [
+      { name: 'sessions' },
+      { name: 'activeUsers' },
+      { name: 'conversions' }
+    ]
+  });
 
-  // 5. Google Ads Performance (if linked)
-  try {
-    reports.googleAds = AnalyticsData.Properties.runReport({
-      dateRanges: [{ startDate: startDate, endDate: endDate }],
-      dimensions: [{ name: 'sessionCampaignName' }],
-      metrics: [
-        { name: 'advertiserAdClicks' },
-        { name: 'advertiserAdCost' },
-        { name: 'advertiserAdImpressions' }
-      ]
-    }, targetPropertyId);
-  } catch (error) {
-    console.warn("Google Ads metrics not available (likely unlinked): " + error.message);
-  }
+  // 4. Acquisition channels (previous period)
+  reports.traffic_previous = runReportSafe({
+    dateRanges: [{ startDate: previousStart, endDate: previousEnd }],
+    dimensions: [
+      { name: 'sessionSourceMedium' },
+      { name: 'sessionCampaignName' }
+    ],
+    metrics: [
+      { name: 'sessions' },
+      { name: 'activeUsers' },
+      { name: 'conversions' }
+    ]
+  });
+
+  // 5. Custom Events (current period)
+  reports.events_current = runReportSafe({
+    dateRanges: [{ startDate: currentStart, endDate: currentEnd }],
+    dimensions: [{ name: 'eventName' }],
+    metrics: [{ name: 'eventCount' }]
+  });
+
+  // 6. Top Pages by pageviews (current period)
+  reports.pages_current = runReportSafe({
+    dateRanges: [{ startDate: currentStart, endDate: currentEnd }],
+    dimensions: [{ name: 'pagePath' }],
+    metrics: [
+      { name: 'screenPageViews' },
+      { name: 'activeUsers' }
+    ],
+    orderBys: [{ metric: { metricName: 'screenPageViews' }, desc: true }]
+  });
+
+  // 7. Google Ads campaign metrics (current period, if linked)
+  reports.googleAds = runReportSafe({
+    dateRanges: [{ startDate: currentStart, endDate: currentEnd }],
+    dimensions: [{ name: 'sessionCampaignName' }],
+    metrics: [
+      { name: 'advertiserAdClicks' },
+      { name: 'advertiserAdCost' },
+      { name: 'advertiserAdImpressions' }
+    ]
+  });
 
   return reports;
 }
 
 /**
- * Process raw GA4 report data into clean JSON structure for UI & AI
+ * Process raw GA4 report data, calculate growth rates, and bundle context
  */
 function processGA4Data(reports) {
-  var generalData = parseReportRows(reports.general);
-  var trafficSources = parseReportRows(reports.trafficSources);
-  var eventData = parseReportRows(reports.events);
-  var geoData = parseReportRows(reports.geo);
+  var genCurrent = parseReportRows(reports.general_current);
+  var genPrevious = parseReportRows(reports.general_previous);
+  var trafficCurrent = parseReportRows(reports.traffic_current);
+  var trafficPrevious = parseReportRows(reports.traffic_previous);
+  var eventData = parseReportRows(reports.events_current);
+  var pagesData = parseReportRows(reports.pages_current);
   var adsData = parseReportRows(reports.googleAds);
 
-  // If no general metrics are returned, return fallback data structure
-  if (generalData.length === 0) {
+  if (genCurrent.length === 0) {
     return _getFallbackData();
   }
 
-  // Calculate overall traffic totals
+  // Calculate helper for percentage change
+  function getChangePercent(currentVal, previousVal) {
+    if (!previousVal || previousVal === 0) {
+      return currentVal > 0 ? "+100.0%" : "0.0%";
+    }
+    var pct = ((currentVal - previousVal) / previousVal) * 100;
+    return (pct >= 0 ? "+" : "") + pct.toFixed(1) + "%";
+  }
+
+  // Helper for absolute percentage point difference (e.g. rate changes)
+  function getDiffPercent(currentVal, previousVal) {
+    var diff = currentVal - previousVal;
+    return (diff >= 0 ? "+" : "") + diff.toFixed(2) + "% pts";
+  }
+
+  // 1. Compute CURRENT totals
   var totalSessions = 0;
   var totalActiveUsers = 0;
   var totalNewUsers = 0;
@@ -223,7 +263,7 @@ function processGA4Data(reports) {
   var weightedBounceRateSum = 0;
   var weightedConversionRateSum = 0;
 
-  generalData.forEach(function(row) {
+  genCurrent.forEach(function(row) {
     totalSessions += (row.sessions || 0);
     totalActiveUsers += (row.activeUsers || 0);
     totalNewUsers += (row.newUsers || 0);
@@ -240,7 +280,34 @@ function processGA4Data(reports) {
   var avgBounceRate = totalSessions > 0 ? (weightedBounceRateSum / totalSessions) : 0;
   var avgConversionRate = totalSessions > 0 ? (weightedConversionRateSum / totalSessions) : 0;
 
-  // Process specific events
+  // 2. Compute PREVIOUS totals
+  var totalSessionsPrev = 0;
+  var totalActiveUsersPrev = 0;
+  var totalNewUsersPrev = 0;
+  var totalPageViewsPrev = 0;
+  var weightedDurationSumPrev = 0;
+  var weightedEngagementRateSumPrev = 0;
+  var weightedBounceRateSumPrev = 0;
+  var weightedConversionRateSumPrev = 0;
+
+  genPrevious.forEach(function(row) {
+    totalSessionsPrev += (row.sessions || 0);
+    totalActiveUsersPrev += (row.activeUsers || 0);
+    totalNewUsersPrev += (row.newUsers || 0);
+    totalPageViewsPrev += (row.screenPageViews || 0);
+
+    weightedDurationSumPrev += (row.averageSessionDuration || 0) * (row.sessions || 0);
+    weightedEngagementRateSumPrev += (row.engagementRate || 0) * (row.sessions || 0);
+    weightedBounceRateSumPrev += (row.bounceRate || 0) * (row.sessions || 0);
+    weightedConversionRateSumPrev += (row.sessionConversionRate || 0) * (row.sessions || 0);
+  });
+
+  var avgSessionDurPrev = totalSessionsPrev > 0 ? Math.round(weightedDurationSumPrev / totalSessionsPrev) : 0;
+  var avgEngagementRatePrev = totalSessionsPrev > 0 ? (weightedEngagementRateSumPrev / totalSessionsPrev) : 0;
+  var avgBounceRatePrev = totalSessionsPrev > 0 ? (weightedBounceRateSumPrev / totalSessionsPrev) : 0;
+  var avgConversionRatePrev = totalSessionsPrev > 0 ? (weightedConversionRateSumPrev / totalSessionsPrev) : 0;
+
+  // 3. Process Custom Events
   var testStarts = 0;
   var testCompletes = 0;
   var leadForms = 0;
@@ -253,7 +320,7 @@ function processGA4Data(reports) {
     if (eName === "lead_form_submit") leadForms = eCount;
   });
 
-  // Calculate Drop-off Rate
+  // Drop-off rate
   var dropoff = "No Data";
   if (testStarts > 0) {
     var diff = testStarts - testCompletes;
@@ -263,7 +330,7 @@ function processGA4Data(reports) {
     dropoff = "0.0%";
   }
 
-  // Calculate Ads CPA
+  // Google Ads CPA
   var adClicks = 0;
   var adCost = 0;
   var adImpressions = 0;
@@ -280,13 +347,13 @@ function processGA4Data(reports) {
     costPerConversion = "$" + adCost.toFixed(2) + " (Total)";
   }
 
-  // Identify top metrics
+  // Top dimensions (Current)
   var topCampaign = "N/A";
   var topSource = "N/A";
   var maxCampaignSessions = -1;
   var maxSourceSessions = -1;
 
-  trafficSources.forEach(function(row) {
+  trafficCurrent.forEach(function(row) {
     if (row.sessions > maxCampaignSessions && row.sessionCampaignName && row.sessionCampaignName !== "(referral)" && row.sessionCampaignName !== "(direct)") {
       maxCampaignSessions = row.sessions;
       topCampaign = row.sessionCampaignName;
@@ -299,7 +366,7 @@ function processGA4Data(reports) {
 
   var topDevice = "N/A";
   var maxDeviceSessions = -1;
-  generalData.forEach(function(row) {
+  genCurrent.forEach(function(row) {
     if (row.sessions > maxDeviceSessions) {
       maxDeviceSessions = row.sessions;
       topDevice = row.deviceCategory;
@@ -321,27 +388,50 @@ function processGA4Data(reports) {
     topDevice: topDevice,
     returningRate: "Requires Custom Setup",
     
-    // Detailed raw dataset containing all metrics for AI agent retrieval
+    // Period-over-Period changes & expanded context
+    growthMetrics: {
+      activeUsersGrowth: getChangePercent(totalActiveUsers, totalActiveUsersPrev),
+      sessionsGrowth: getChangePercent(totalSessions, totalSessionsPrev),
+      pageViewsGrowth: getChangePercent(totalPageViews, totalPageViewsPrev),
+      conversionRateChange: getDiffPercent(avgConversionRate * 100, avgConversionRatePrev * 100),
+      engagementRateChange: getDiffPercent(avgEngagementRate * 100, avgEngagementRatePrev * 100)
+    },
+    
     rawMetrics: {
       summary: {
-        totalSessions: totalSessions,
-        totalActiveUsers: totalActiveUsers,
-        totalNewUsers: totalNewUsers,
-        totalPageViews: totalPageViews,
-        averageEngagementTimeSeconds: avgSessionDur,
-        averageBounceRate: (avgBounceRate * 100).toFixed(2) + "%",
-        overallEngagementRate: engagementRateText,
-        overallConversionRate: conversionRateText
+        current: {
+          totalSessions: totalSessions,
+          totalActiveUsers: totalActiveUsers,
+          totalNewUsers: totalNewUsers,
+          totalPageViews: totalPageViews,
+          averageEngagementTimeSeconds: avgSessionDur,
+          averageBounceRate: (avgBounceRate * 100).toFixed(2) + "%",
+          overallEngagementRate: engagementRateText,
+          overallConversionRate: conversionRateText
+        },
+        previous: {
+          totalSessions: totalSessionsPrev,
+          totalActiveUsers: totalActiveUsersPrev,
+          totalNewUsers: totalNewUsersPrev,
+          totalPageViews: totalPageViewsPrev,
+          averageEngagementTimeSeconds: avgSessionDurPrev,
+          averageBounceRate: (avgBounceRatePrev * 100).toFixed(2) + "%",
+          overallEngagementRate: (avgEngagementRatePrev * 100).toFixed(2) + "%",
+          overallConversionRate: (avgConversionRatePrev * 100).toFixed(2) + "%"
+        }
       },
-      devices: generalData.map(function(d) {
+      devices: genCurrent.map(function(d) {
+        var prevDeviceMatch = genPrevious.find(function(pd) { return pd.deviceCategory === d.deviceCategory; });
+        var prevUsers = prevDeviceMatch ? prevDeviceMatch.activeUsers : 0;
         return {
           deviceCategory: d.deviceCategory,
           activeUsers: d.activeUsers,
+          activeUsersGrowth: getChangePercent(d.activeUsers, prevUsers),
           sessions: d.sessions,
           conversionRate: (d.sessionConversionRate * 100).toFixed(2) + "%"
         };
       }),
-      trafficSources: trafficSources.slice(0, 10).map(function(t) {
+      trafficSources: trafficCurrent.slice(0, 10).map(function(t) {
         return {
           sourceMedium: t.sessionSourceMedium,
           campaign: t.sessionCampaignName,
@@ -350,8 +440,8 @@ function processGA4Data(reports) {
           conversions: t.conversions
         };
       }),
+      topPages: pagesData.slice(0, 10),
       events: eventData.slice(0, 15),
-      countries: geoData.slice(0, 10),
       googleAds: adsData.slice(0, 10)
     }
   };
@@ -372,14 +462,14 @@ function analyzeWithGemini(gaData) {
 
   var url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + GEMINI_API_KEY;
   
-  var prompt = "You are an expert GA4 data analyst and AI automation guru.\n" +
-  "Analyze the following GA4 metrics and provide crisp, data-driven conclusions and actionable recommendations based strictly on the data provided.\n\n" +
+  var prompt = "You are Google Analytics Intelligence (Ask Advisor), a senior GA4 analyst.\n" +
+  "Analyze the following GA4 metrics (including period-over-period comparisons, top pages, and device segments) and provide crisp, data-driven conclusions and actionable recommendations based strictly on the data provided.\n\n" +
   "Data:\n" +
   JSON.stringify(gaData, null, 2) + "\n\n" +
   "Instructions:\n" +
   "1. Provide exactly 3 conclusions and 3 recommendations.\n" +
-  "2. Conclusions must be directly derived from the numbers in the data (e.g. device categories, conversion rates, campaigns, event counts).\n" +
-  "3. Recommendations must be actionable steps to improve the site's metrics.\n" +
+  "2. Conclusions must incorporate specific numbers and growth rates (e.g., 'Mobile conversions dropped by -8.5%...').\n" +
+  "3. Recommendations must offer clear UI/UX action points for mobile layout, Google Ads spend, or landing page optimization.\n" +
   "4. Output your response EXACTLY as a JSON object with this shape:\n" +
   "{\n" +
   "  \"conclusions\": [\"conclusion 1\", \"conclusion 2\", \"conclusion 3\"],\n" +
@@ -466,21 +556,40 @@ function _getFallbackData() {
     engagementRate: "0.00%",
     topDevice: "No Data",
     returningRate: "No Data",
+    growthMetrics: {
+      activeUsersGrowth: "0.0%",
+      sessionsGrowth: "0.0%",
+      pageViewsGrowth: "0.0%",
+      conversionRateChange: "0.0%",
+      engagementRateChange: "0.0%"
+    },
     rawMetrics: {
       summary: {
-        totalSessions: 0,
-        totalActiveUsers: 0,
-        totalNewUsers: 0,
-        totalPageViews: 0,
-        averageEngagementTimeSeconds: 0,
-        averageBounceRate: "0.00%",
-        overallEngagementRate: "0.00%",
-        overallConversionRate: "0.00%"
+        current: {
+          totalSessions: 0,
+          totalActiveUsers: 0,
+          totalNewUsers: 0,
+          totalPageViews: 0,
+          averageEngagementTimeSeconds: 0,
+          averageBounceRate: "0.00%",
+          overallEngagementRate: "0.00%",
+          overallConversionRate: "0.00%"
+        },
+        previous: {
+          totalSessions: 0,
+          totalActiveUsers: 0,
+          totalNewUsers: 0,
+          totalPageViews: 0,
+          averageEngagementTimeSeconds: 0,
+          averageBounceRate: "0.00%",
+          overallEngagementRate: "0.00%",
+          overallConversionRate: "0.00%"
+        }
       },
       devices: [],
       trafficSources: [],
+      topPages: [],
       events: [],
-      countries: [],
       googleAds: []
     }
   };
@@ -496,16 +605,17 @@ function answerQuestionWithGemini(gaData, question) {
 
   var url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + GEMINI_API_KEY;
   
-  var prompt = "You are an expert GA4 data analyst and AI automation assistant.\n" +
+  var prompt = "You are Google Analytics Intelligence (Ask Advisor), a world-class GA4 senior web analyst and growth advisor.\n" +
   "The user has asked the following specific question about their GA4 data:\n" +
   "\"" + question + "\"\n\n" +
-  "Here is the GA4 data (including structured lists in 'rawMetrics'):\n" +
+  "Here is the GA4 data (including current totals, previous totals, top pages, traffic channels, and period-over-period percentage growth):\n" +
   JSON.stringify(gaData, null, 2) + "\n\n" +
-  "CRITICAL INSTRUCTIONS:\n" +
-  "1. Answer ONLY the exact question asked. Do NOT provide extra commentary, general suggestions, recommendations, or side facts that are not directly answering the user's prompt.\n" +
-  "2. Use the detailed metrics in 'rawMetrics' to provide precise numbers (like page views, sessions, active users, country, device, source, etc.) if relevant to the question.\n" +
-  "3. If the provided data does not contain the information needed to answer the question, state exactly: 'The provided GA4 data does not contain the necessary information to answer this question.' Do not attempt to guess, extrapolate, or offer speculative advice.\n" +
-  "4. Keep your response extremely focused, clear, and concise (1-3 sentences maximum).";
+  "CRITICAL DIRECTIVES:\n" +
+  "1. Answer ONLY the exact question asked. Do NOT include generic instructions or side facts that are not directly answering the user's prompt.\n" +
+  "2. You are Google Analytics Advisor, so bring deep diagnostic insights. E.g., if traffic dropped, explain WHICH campaign or source caused it, and compare device categories (mobile vs desktop).\n" +
+  "3. Incorporate Period-over-Period (PoP) changes (e.g. 'Sessions grew by +12.4% compared to the previous week, driven by a spike in search traffic') to show trends.\n" +
+  "4. Provide a clear attribution for successes or failures (attribute traffic/conversions to specific campaign names or source/mediums) and list the top page views if relevant.\n" +
+  "5. Keep the answer highly focused, clear, and actionable (maximum 2-4 sentences or a concise bullet list). If the data does not contain the answer, respond with: 'The provided GA4 data does not contain the necessary information to answer this question.'";
 
   var payload = {
     contents: [{
