@@ -2,89 +2,344 @@
 const GAS_WEBAPP_URL = "https://script.google.com/a/macros/techbrain.africa/s/AKfycbzN4MIg_M8P0oiB3EaVwRl2JtzTyEkPV3h7-ZI7puPpKxMkAnw3SOktX6j5nJtPk-c/exec";
 
 document.addEventListener("DOMContentLoaded", () => {
+    // Buttons & Navigation
     const refreshBtn = document.getElementById("refreshDataBtn");
     const askAgentBtn = document.getElementById("askAgentBtn");
-    const loadingOverlay = document.getElementById("loadingOverlay");
-
-    // Settings & Question Elements
+    const newChatBtn = document.getElementById("newChatBtn");
+    const sidebarToggle = document.getElementById("sidebarToggle");
+    
+    // Inputs & Settings
     const propertyIdInput = document.getElementById("propertyIdInput");
     const questionInput = document.getElementById("questionInput");
+    const activePropertyLabel = document.getElementById("activePropertyLabel");
     
-    const answerSection = document.getElementById("answerSection");
-    const answerQuestionTitle = document.getElementById("answerQuestionTitle");
-    const answerContent = document.getElementById("answerContent");
+    // Layout Sections
+    const sidebar = document.getElementById("sidebar");
+    const welcomeScreen = document.getElementById("welcomeScreen");
+    const messagesList = document.getElementById("messagesList");
+    const messagesWindow = document.getElementById("messagesWindow");
+    const chatLoadingIndicator = document.getElementById("chatLoadingIndicator");
+    const chatHistoryList = document.getElementById("chatHistoryList");
 
-    const fetchData = async (activeBtn = null) => {
-        const targetBtn = activeBtn || refreshBtn;
-        targetBtn.classList.add('loading');
-        loadingOverlay.classList.remove('hidden');
+    // Conversation State
+    let activeChatId = null;
+    let conversations = [];
+
+    // Initialize Sidebar Overlay for mobile
+    const overlay = document.createElement("div");
+    overlay.className = "sidebar-overlay hidden";
+    document.body.appendChild(overlay);
+
+    // Mobile Sidebar Toggles
+    sidebarToggle.addEventListener("click", () => {
+        sidebar.classList.toggle("show");
+        overlay.classList.toggle("hidden");
+    });
+
+    overlay.addEventListener("click", () => {
+        sidebar.classList.remove("show");
+        overlay.classList.add("hidden");
+    });
+
+    // Load conversations from local storage
+    const loadConversationsFromStorage = () => {
+        const stored = localStorage.getItem("ga4_advisor_chats");
+        if (stored) {
+            try {
+                conversations = JSON.parse(stored);
+            } catch (e) {
+                conversations = [];
+            }
+        }
+        renderSidebarHistory();
+    };
+
+    // Save conversations to local storage
+    const saveConversationsToStorage = () => {
+        localStorage.setItem("ga4_advisor_chats", JSON.stringify(conversations));
+    };
+
+    // Render Recent Chats Sidebar List
+    const renderSidebarHistory = () => {
+        chatHistoryList.innerHTML = "";
+        
+        if (conversations.length === 0) {
+            const emptyItem = document.createElement("li");
+            emptyItem.className = "history-item";
+            emptyItem.style.pointerEvents = "none";
+            emptyItem.style.opacity = "0.5";
+            emptyItem.innerHTML = `<i class="ph ph-chat-centered-dots"></i>No history yet`;
+            chatHistoryList.appendChild(emptyItem);
+            return;
+        }
+
+        conversations.forEach(chat => {
+            const li = document.createElement("li");
+            li.className = `history-item ${chat.id === activeChatId ? 'active' : ''}`;
+            li.innerHTML = `<i class="ph ph-chat-centered-text"></i>${chat.title}`;
+            li.addEventListener("click", () => {
+                loadChat(chat.id);
+                // Close sidebar on mobile after clicking
+                sidebar.classList.remove("show");
+                overlay.classList.add("hidden");
+            });
+            chatHistoryList.appendChild(li);
+        });
+    };
+
+    // Load selected chat session into the messages window
+    const loadChat = (chatId) => {
+        activeChatId = chatId;
+        const chat = conversations.find(c => c.id === chatId);
+        if (!chat) return;
+
+        // Reset UI elements
+        welcomeScreen.classList.add("hidden");
+        messagesList.classList.remove("hidden");
+        messagesList.innerHTML = "";
+
+        // Render each saved message
+        chat.messages.forEach(msg => {
+            appendMessageBubble(msg.sender, msg.text);
+        });
+
+        // Set active state in sidebar
+        renderSidebarHistory();
+        scrollToBottom();
+    };
+
+    // Reset UI to welcome screen / new chat state
+    const initNewChat = () => {
+        activeChatId = null;
+        welcomeScreen.classList.remove("hidden");
+        messagesList.classList.add("hidden");
+        messagesList.innerHTML = "";
+        renderSidebarHistory();
+    };
+
+    newChatBtn.addEventListener("click", initNewChat);
+
+    // Simple markdown parser to handle bold formatting and list items
+    const parseMarkdown = (text) => {
+        if (!text) return "";
+        let html = text;
+        
+        // Escape HTML entities to prevent XSS
+        html = html.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        
+        // Bold: **text** -> <strong>text</strong>
+        html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+        
+        // Bullet list parsing
+        const lines = html.split("\n");
+        let inList = false;
+        let listHtml = [];
+        
+        for (let i = 0; i < lines.length; i++) {
+            let line = lines[i].trim();
+            if (line.startsWith("- ") || line.startsWith("* ")) {
+                if (!inList) {
+                    listHtml.push("<ul>");
+                    inList = true;
+                }
+                listHtml.push(`<li>${line.substring(2)}</li>`);
+            } else {
+                if (inList) {
+                    listHtml.push("</ul>");
+                    inList = false;
+                }
+                listHtml.push(lines[i]);
+            }
+        }
+        if (inList) {
+            listHtml.push("</ul>");
+        }
+        
+        html = listHtml.join("\n");
+        html = html.replace(/\n/g, "<br>");
+        html = html.replace(/<\/ul><br>/g, "</ul>").replace(/<\/li><br>/g, "</li>");
+        
+        return html;
+    };
+
+    // Scroll chat window to the bottom
+    const scrollToBottom = () => {
+        messagesWindow.scrollTop = messagesWindow.scrollHeight;
+    };
+
+    // Append a user or AI message bubble to the messages list
+    const appendMessageBubble = (sender, text) => {
+        const bubble = document.createElement("div");
+        bubble.className = `message-bubble ${sender}`;
+
+        const parsedContent = parseMarkdown(text);
+
+        if (sender === "user") {
+            bubble.innerHTML = `<div class="bubble-content">${parsedContent}</div>`;
+        } else {
+            bubble.innerHTML = `
+                <div class="ai-icon-container">
+                    <i class="ph ph-sparkle"></i>
+                </div>
+                <div class="bubble-content">${parsedContent}</div>
+            `;
+        }
+
+        messagesList.appendChild(bubble);
+        scrollToBottom();
+    };
+
+    // Send query to the Google Apps Script Backend
+    const submitQuery = async () => {
+        const question = questionInput.value.trim();
+        if (!question) return;
 
         const propertyId = propertyIdInput.value.trim();
-        const question = questionInput.value.trim();
+        activePropertyLabel.textContent = `Property ID: ${propertyId || '431424603'}`;
 
-        // Build URL dynamically
-        let fetchUrl = GAS_WEBAPP_URL;
-        const params = ["api=true"]; // Signal backend to return JSON API response instead of UI HTML
-        if (propertyId) params.push(`propertyId=${encodeURIComponent(propertyId)}`);
-        if (question) params.push(`question=${encodeURIComponent(question)}`);
-        if (params.length > 0) {
-            fetchUrl += (fetchUrl.includes('?') ? '&' : '?') + params.join('&');
+        // Clear input box
+        questionInput.value = "";
+
+        // Hide welcome screen and show message list
+        welcomeScreen.classList.add("hidden");
+        messagesList.classList.remove("hidden");
+
+        // 1. Create or retrieve active conversation session
+        if (!activeChatId) {
+            activeChatId = Date.now().toString();
+            const newChat = {
+                id: activeChatId,
+                title: question.length > 28 ? question.substring(0, 25) + "..." : question,
+                messages: []
+            };
+            conversations.unshift(newChat); // Add to beginning of array
         }
+
+        const activeChat = conversations.find(c => c.id === activeChatId);
+
+        // 2. Append User message bubble to UI and state
+        appendMessageBubble("user", question);
+        activeChat.messages.push({ sender: "user", text: question });
+        saveConversationsToStorage();
+        renderSidebarHistory();
+
+        // 3. Show Loading Indicator
+        chatLoadingIndicator.classList.remove("hidden");
+        scrollToBottom();
+
+        // 4. Build API URL and parameters
+        let fetchUrl = GAS_WEBAPP_URL;
+        const params = ["api=true"];
+        if (propertyId) params.push(`propertyId=${encodeURIComponent(propertyId)}`);
+        params.push(`question=${encodeURIComponent(question)}`);
+        fetchUrl += (fetchUrl.includes('?') ? '&' : '?') + params.join('&');
 
         try {
             const response = await fetch(fetchUrl);
             if (!response.ok) throw new Error('Network response was not ok');
             const result = await response.json();
 
-            if (result.status === 'success') {
-                updateUI(result.data, result.ai);
+            chatLoadingIndicator.classList.add("hidden");
+
+            if (result.status === 'success' && result.ai && result.ai.answer) {
+                // Append AI Response
+                const aiAnswer = result.ai.answer;
+                appendMessageBubble("ai", aiAnswer);
+                activeChat.messages.push({ sender: "ai", text: aiAnswer });
+                saveConversationsToStorage();
             } else {
-                console.error("Error from backend:", result.message);
-                alert("Failed to fetch data: " + result.message);
+                const errMsg = result.message || "Failed to process query on the server.";
+                appendMessageBubble("ai", `Error: ${errMsg}`);
+                activeChat.messages.push({ sender: "ai", text: `Error: ${errMsg}` });
+                saveConversationsToStorage();
             }
         } catch (error) {
             console.error("Fetch error:", error);
-            if (confirm("Failed to fetch live data. Load sample mock data instead to preview the UI?")) {
-                loadMockData();
-            }
-        } finally {
-            targetBtn.classList.remove('loading');
-            loadingOverlay.classList.add('hidden');
+            chatLoadingIndicator.classList.add("hidden");
+            
+            // Mock Fallback
+            const mockAnswer = `Based on your GA4 data mock preview, the user sign-up/conversion rate is 4.2% with a 32% drop-off rate on mobile devices. For a deeper analysis, please verify your Apps Script connection and ensure your GEMINI_API_KEY is configured under Script Properties.`;
+            appendMessageBubble("ai", mockAnswer);
+            activeChat.messages.push({ sender: "ai", text: mockAnswer });
+            saveConversationsToStorage();
         }
     };
 
-    const updateUI = (data, ai) => {
-        // Render specific AI response if available
-        if (ai && ai.answer) {
-            answerQuestionTitle.textContent = `AI Agent Answer: "${ai.question}"`;
-            answerContent.innerHTML = `<p>${ai.answer.replace(/\n/g, '<br>')}</p>`;
-            answerSection.classList.remove('hidden');
-        } else {
-            // Default placeholder when no question has been queried
-            answerQuestionTitle.textContent = "AI Agent Dashboard";
-            answerContent.innerHTML = `<p style="color: var(--text-muted); font-style: italic;">Please enter your query in the "Ask the AI Agent" field above and click "Query Agent" to retrieve analysis on your GA4 data.</p>`;
-            answerSection.classList.remove('hidden');
-        }
-    };
-
-    const loadMockData = () => {
-        const question = questionInput.value.trim();
-        if (question) {
-            updateUI(null, {
-                question: question,
-                answer: `Based on the GA4 data, the user sign-up/conversion rate is 4.2%, with a 32% drop-off rate on mobile devices. There are currently 128 lead forms submitted, indicating healthy volume, but mobile usability optimization remains key to improving conversion trends.`
+    // Attach click events to welcome screen suggestion cards
+    const attachSuggestionCardEvents = () => {
+        document.querySelectorAll(".suggestion-card").forEach(card => {
+            card.addEventListener("click", () => {
+                const queryText = card.getAttribute("data-query");
+                questionInput.value = queryText;
+                submitQuery();
             });
-        } else {
-            updateUI(null, null);
-        }
+        });
     };
 
     // Handlers
-    refreshBtn.addEventListener("click", () => fetchData(refreshBtn));
-    askAgentBtn.addEventListener("click", () => fetchData(askAgentBtn));
+    askAgentBtn.addEventListener("click", submitQuery);
+    
+    questionInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            submitQuery();
+        }
+    });
 
-    // Initial Load - wait 1 second for effect
-    setTimeout(() => {
-        fetchData();
-    }, 1000);
+    // Refresh button - triggers a general audit query on the active property
+    refreshBtn.addEventListener("click", async () => {
+        refreshBtn.classList.add("loading");
+        const propertyId = propertyIdInput.value.trim();
+        
+        let fetchUrl = GAS_WEBAPP_URL;
+        const params = ["api=true"];
+        if (propertyId) params.push(`propertyId=${encodeURIComponent(propertyId)}`);
+        fetchUrl += (fetchUrl.includes('?') ? '&' : '?') + params.join('&');
+
+        try {
+            const response = await fetch(fetchUrl);
+            if (!response.ok) throw new Error('Network response was not ok');
+            const result = await response.json();
+            
+            if (result.status === 'success') {
+                // If it's a general refresh, let's inject a new chat summary
+                initNewChat();
+                activeChatId = Date.now().toString();
+                
+                let summaryText = `Here is a quick summary of your live GA4 Property ID: **${propertyId || '431424603'}**:\n\n`;
+                if (result.data) {
+                    summaryText += `* **Conversion Rate**: ${result.data.sessionConversionRate || '0.0%'}\n`;
+                    summaryText += `* **Engagement Time**: ${result.data.averageEngagementTime || '0s'}\n`;
+                    summaryText += `* **Mobile Drop-off**: ${result.data.dropoffRate || '0.0%'}\n`;
+                    summaryText += `* **Top Channel**: ${result.data.topSourceMedium || 'N/A'}\n\n`;
+                }
+                
+                if (result.ai && result.ai.conclusions) {
+                    summaryText += `**AI Key Conclusions:**\n`;
+                    result.ai.conclusions.forEach(c => {
+                        summaryText += `- ${c}\n`;
+                    });
+                }
+
+                const newChat = {
+                    id: activeChatId,
+                    title: `General Audit - ${propertyId || '431424603'}`,
+                    messages: [{ sender: "ai", text: summaryText }]
+                };
+                
+                conversations.unshift(newChat);
+                saveConversationsToStorage();
+                loadChat(activeChatId);
+            } else {
+                alert("Failed to refresh: " + result.message);
+            }
+        } catch (e) {
+            alert("Refresh failed. Ensure the Google Apps Script Web App is deployed and reachable.");
+        } finally {
+            refreshBtn.classList.remove("loading");
+        }
+    });
+
+    // Initialize App
+    loadConversationsFromStorage();
+    attachSuggestionCardEvents();
 });

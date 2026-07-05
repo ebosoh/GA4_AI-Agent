@@ -20,60 +20,105 @@
 </head>
 
 <body>
-    <div class="dashboard-wrapper">
-        <header class="header">
-            <div class="logo-container">
-                <i class="ph ph-chart-line-up logo-icon"></i>
-                <h1>GA4 AI Automation</h1>
+    <div class="app-container">
+        <!-- Sidebar on Left -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <i class="ph ph-sparkle logo-icon"></i>
+                <h2>GA4 AI Agent</h2>
             </div>
-            <div class="header-right">
-                <span class="status-indicator">
-                    <span class="dot"></span>Live Data
-                </span>
-                <button id="refreshDataBtn" class="refresh-btn">
-                    <i class="ph ph-arrows-clockwise"></i> Refresh Insights
+            
+            <button id="newChatBtn" class="new-chat-btn">
+                <i class="ph ph-plus"></i> New Chat
+            </button>
+            
+            <div class="history-section">
+                <span class="section-title">Recent Chats</span>
+                <ul id="chatHistoryList" class="history-list">
+                    <!-- History items populated dynamically by JS -->
+                </ul>
+            </div>
+            
+            <div class="sidebar-footer">
+                <div class="input-group">
+                    <label for="propertyIdInput"><i class="ph ph-hash"></i> GA4 Property ID</label>
+                    <input type="text" id="propertyIdInput" placeholder="e.g., 431424603" value="431424603">
+                </div>
+                <div class="status-indicator">
+                    <span class="dot"></span>Live Connection
+                </div>
+            </div>
+        </aside>
+        
+        <!-- Main Chat Area -->
+        <main class="chat-container">
+            <header class="chat-header">
+                <button id="sidebarToggle" class="sidebar-toggle-btn">
+                    <i class="ph ph-list"></i>
                 </button>
-            </div>
-        </header>
-
-        <main class="main-content">
-            <!-- Loading State -->
-            <div id="loadingOverlay" class="loading-overlay hidden">
-                <div class="spinner"></div>
-                <p>Gemini is analyzing your data...</p>
-            </div>
-
-            <!-- Configuration & Query Section -->
-            <section class="config-section glass-panel">
-                <div class="config-grid">
-                    <div class="input-group">
-                        <label for="propertyIdInput"><i class="ph ph-hash"></i> GA4 Property ID</label>
-                        <input type="text" id="propertyIdInput" placeholder="e.g., 431424603" value="431424603">
+                <div class="header-title">
+                    <span id="activePropertyLabel">Property ID: 431424603</span>
+                </div>
+                <button id="refreshDataBtn" class="refresh-btn" title="Refresh Live GA4 Data">
+                    <i class="ph ph-arrows-clockwise"></i>
+                </button>
+            </header>
+            
+            <!-- Chat Messages Window -->
+            <div class="messages-window" id="messagesWindow">
+                <!-- Welcome Screen (Shown when conversation is empty) -->
+                <div class="welcome-screen" id="welcomeScreen">
+                    <h1>Hello! I'm your GA4 Advisor</h1>
+                    <p>Ask me any question about your GA4 account's traffic, campaign attribution, device conversions, or weekly trends.</p>
+                    
+                    <div class="suggestions-grid">
+                        <div class="suggestion-card" data-query="How did my active user count and sessions change compared to the previous week?">
+                            <i class="ph ph-chart-line-up"></i>
+                            <span>Analyze weekly traffic & user trends</span>
+                        </div>
+                        <div class="suggestion-card" data-query="Which traffic source or campaign is driving the most conversions, and how is its performance trending?">
+                            <i class="ph ph-megaphone"></i>
+                            <span>Find top converting campaigns</span>
+                        </div>
+                        <div class="suggestion-card" data-query="How is mobile device traffic performing compared to desktop, and is mobile conversion rate growing or dropping?">
+                            <i class="ph ph-device-mobile"></i>
+                            <span>Compare mobile vs desktop UX</span>
+                        </div>
+                        <div class="suggestion-card" data-query="What are our top page paths by screen pageviews?">
+                            <i class="ph ph-file-text"></i>
+                            <span>View top visited landing pages</span>
+                        </div>
                     </div>
-                    <div class="input-group">
-                        <label for="questionInput"><i class="ph ph-question"></i> Ask the AI Agent</label>
-                        <input type="text" id="questionInput" placeholder="e.g., What is the new user sign-up trend? (Leave empty for general audit)">
+                </div>
+                
+                <!-- Conversation Bubbles Container -->
+                <div class="messages-list hidden" id="messagesList">
+                    <!-- Dynamic chat bubbles: user and AI -->
+                </div>
+                
+                <!-- Chat-style Loading Indicator -->
+                <div id="chatLoadingIndicator" class="chat-loading-bubble hidden">
+                    <div class="sparkles-container"><i class="ph ph-sparkle"></i></div>
+                    <div class="dots-container">
+                        <span class="dot-bounce"></span>
+                        <span class="dot-bounce"></span>
+                        <span class="dot-bounce"></span>
                     </div>
-                    <button id="askAgentBtn" class="refresh-btn">
-                        <i class="ph ph-sparkle"></i> Query Agent
+                </div>
+            </div>
+            
+            <!-- Bottom Input Bar -->
+            <footer class="input-area-wrapper">
+                <div class="input-bar-container">
+                    <input type="text" id="questionInput" placeholder="Ask the AI Agent about your GA4 data...">
+                    <button id="askAgentBtn" class="send-btn" title="Send query">
+                        <i class="ph ph-paper-plane-right"></i>
                     </button>
                 </div>
-            </section>
-
-            <!-- Custom AI Answer Section (Hidden by default) -->
-            <section id="answerSection" class="answer-section hidden">
-                <div class="card ai-card answer-card glass-panel">
-                    <div class="card-header">
-                        <i class="ph ph-sparkle"></i>
-                        <h2 id="answerQuestionTitle">AI Agent Answer</h2>
-                    </div>
-                    <div id="answerContent" class="answer-content">
-                        <!-- Dynamic specific answer -->
-                    </div>
+                <div class="disclaimer-text">
+                    GA4 Advisor uses Gemini to analyze your account and may display inaccurate info.
                 </div>
-            </section>
-
-
+            </footer>
         </main>
     </div>
 
