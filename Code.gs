@@ -7,6 +7,7 @@ var GA4_PROPERTY_ID = 'properties/431424603';
 
 // Replace with your actual Gemini API key if you don't use Script Properties
 var GEMINI_API_KEY = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY') || 'INSERT_YOUR_GEMINI_API_KEY_HERE';
+var GEMINI_MODEL = 'gemini-2.5-flash-lite';
 
 /**
  * Handle GET Requests from the Frontend Dashboard
@@ -484,7 +485,7 @@ function generateGA4RequestWithGemini(question) {
     return { error: true, message: "Missing API Key" };
   }
 
-  var url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + GEMINI_API_KEY;
+  var url = "https://generativelanguage.googleapis.com/v1beta/models/" + GEMINI_MODEL + ":generateContent?key=" + GEMINI_API_KEY;
 
   var prompt = "You are a specialized compiler that translates user natural language questions into Google Analytics 4 (GA4) runReport query payloads.\n" +
   "Given the user's question: \"" + question + "\"\n\n" +
@@ -537,7 +538,7 @@ function analyzeWithGemini(gaData) {
     };
   }
 
-  var url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + GEMINI_API_KEY;
+  var url = "https://generativelanguage.googleapis.com/v1beta/models/" + GEMINI_MODEL + ":generateContent?key=" + GEMINI_API_KEY;
   
   var prompt = "You are Google Analytics Intelligence (Ask Advisor), a senior GA4 analyst.\n" +
   "Analyze the following GA4 metrics (including period-over-period comparisons, top pages, and device segments) and provide crisp, data-driven conclusions and actionable recommendations based strictly on the data provided.\n\n" +
@@ -682,7 +683,7 @@ function answerQuestionWithGemini(gaData, question, customReportData, generatedQ
 
   var condensedGaData = _getCondensedOverview(gaData);
 
-  var url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + GEMINI_API_KEY;
+  var url = "https://generativelanguage.googleapis.com/v1beta/models/" + GEMINI_MODEL + ":generateContent?key=" + GEMINI_API_KEY;
   
   var prompt = "You are Google Analytics Intelligence (Ask Advisor), a world-class GA4 senior web analyst and growth advisor.\n" +
   "The user has asked the following specific question about their GA4 data:\n" +
