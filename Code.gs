@@ -35,8 +35,20 @@ function doGet(e) {
         var generatedQuery = null;
 
         // 1. Dynamically generate a custom GA4 Data API request based on the user's question
+        var cache = CacheService.getScriptCache();
+        var cacheKey = "query_" + Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, question.toLowerCase().trim()));
+        var cachedQuery = cache.get(cacheKey);
+
         try {
-          generatedQuery = generateGA4RequestWithGemini(question);
+          if (cachedQuery) {
+            generatedQuery = JSON.parse(cachedQuery);
+          } else {
+            generatedQuery = generateGA4RequestWithGemini(question);
+            if (generatedQuery && !generatedQuery.error) {
+              cache.put(cacheKey, JSON.stringify(generatedQuery), 21600); // Cache for 6 hours
+            }
+          }
+
           if (generatedQuery && !generatedQuery.error) {
             // Run the custom query against the GA4 property
             var customReport = AnalyticsData.Properties.runReport(generatedQuery, propertyId);
@@ -446,7 +458,7 @@ function processGA4Data(reports) {
           conversionRate: (d.sessionConversionRate * 100).toFixed(2) + "%"
         };
       }),
-      trafficSources: trafficCurrent.slice(0, 10).map(function(t) {
+      trafficSources: trafficCurrent.slice(0, 5).map(function(t) {
         return {
           sourceMedium: t.sessionSourceMedium,
           campaign: t.sessionCampaignName,
@@ -455,9 +467,9 @@ function processGA4Data(reports) {
           conversions: t.conversions
         };
       }),
-      topPages: pagesData.slice(0, 10),
-      events: eventData.slice(0, 15),
-      googleAds: adsData.slice(0, 10)
+      topPages: pagesData.slice(0, 5),
+      events: eventData.slice(0, 8),
+      googleAds: adsData.slice(0, 5)
     }
   };
 
@@ -530,7 +542,7 @@ function analyzeWithGemini(gaData) {
   var prompt = "You are Google Analytics Intelligence (Ask Advisor), a senior GA4 analyst.\n" +
   "Analyze the following GA4 metrics (including period-over-period comparisons, top pages, and device segments) and provide crisp, data-driven conclusions and actionable recommendations based strictly on the data provided.\n\n" +
   "Data:\n" +
-  JSON.stringify(gaData, null, 2) + "\n\n" +
+  JSON.stringify(gaData) + "\n\n" +
   "Instructions:\n" +
   "1. Provide exactly 3 conclusions and 3 recommendations.\n" +
   "2. Conclusions must incorporate specific numbers and growth rates (e.g., 'Mobile conversions dropped by -8.5%...').\n" +
@@ -668,6 +680,8 @@ function answerQuestionWithGemini(gaData, question, customReportData, generatedQ
     return "Gemini API Key missing. Please configure GEMINI_API_KEY in the Apps Script.";
   }
 
+  var condensedGaData = _getCondensedOverview(gaData);
+
   var url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + GEMINI_API_KEY;
   
   var prompt = "You are Google Analytics Intelligence (Ask Advisor), a world-class GA4 senior web analyst and growth advisor.\n" +
@@ -675,11 +689,11 @@ function answerQuestionWithGemini(gaData, question, customReportData, generatedQ
   "\"" + question + "\"\n\n" +
   "To help you answer, we ran a dynamically generated GA4 Data API query tailored to their question.\n" +
   "Dynamic Query Configuration Used:\n" +
-  JSON.stringify(generatedQuery, null, 2) + "\n\n" +
+  JSON.stringify(generatedQuery) + "\n\n" +
   "Dynamically Retrieved GA4 Dataset:\n" +
-  JSON.stringify(customReportData, null, 2) + "\n\n" +
+  JSON.stringify(customReportData) + "\n\n" +
   "Standard Dashboard Overview Metrics (use if needed for context/comparison):\n" +
-  JSON.stringify(gaData, null, 2) + "\n\n" +
+  JSON.stringify(condensedGaData) + "\n\n" +
   "CRITICAL DIRECTIVES:\n" +
   "1. Answer ONLY the exact question asked using the custom query data and general metrics. Do NOT include unrelated commentary or recommendations.\n" +
   "2. You are Google Analytics Advisor, so bring deep diagnostic insights. Reference exact numbers (active users, sessions, conversions, pageviews, event counts) returned in the custom query data.\n" +
@@ -713,4 +727,18 @@ function answerQuestionWithGemini(gaData, question, customReportData, generatedQ
   } catch (err) {
     return "Error communicating with Gemini AI: " + err.message;
   }
+}
+
+/**
+ * Helper to remove rawMetrics array lists from gaData to save tokens
+ */
+function _getCondensedOverview(gaData) {
+  if (!gaData) return {};
+  var condensed = {};
+  for (var key in gaData) {
+    if (key !== 'rawMetrics') {
+      condensed[key] = gaData[key];
+    }
+  }
+  return condensed;
 }
