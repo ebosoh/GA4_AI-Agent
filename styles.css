@@ -222,6 +222,34 @@ body {
     border-color: var(--accent-color);
 }
 
+.property-input-wrapper {
+    display: flex;
+    gap: 0.5rem;
+    width: 100%;
+}
+
+.save-property-btn {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-muted);
+    padding: 0.55rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    width: 38px;
+    height: 34px;
+}
+
+.save-property-btn:hover {
+    color: var(--text-main);
+    background: rgba(99, 102, 241, 0.15);
+    border-color: var(--accent-color);
+}
+
 .status-indicator {
     display: flex;
     align-items: center;

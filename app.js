@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const propertyIdInput = document.getElementById("propertyIdInput");
     const questionInput = document.getElementById("questionInput");
     const activePropertyLabel = document.getElementById("activePropertyLabel");
+    const savePropertyBtn = document.getElementById("savePropertyBtn");
     
     // Layout Sections
     const sidebar = document.getElementById("sidebar");
@@ -339,7 +340,43 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    // Property ID save and load helpers
+    const loadPropertyId = () => {
+        const storedId = localStorage.getItem("ga4_property_id");
+        if (storedId) {
+            propertyIdInput.value = storedId;
+            activePropertyLabel.textContent = `Property ID: ${storedId}`;
+        }
+    };
+
+    const savePropertyId = () => {
+        const propertyId = propertyIdInput.value.trim();
+        localStorage.setItem("ga4_property_id", propertyId);
+        activePropertyLabel.textContent = `Property ID: ${propertyId || '431424603'}`;
+        
+        // Show check icon briefly for success feedback
+        const icon = savePropertyBtn.querySelector("i");
+        icon.className = "ph ph-check";
+        savePropertyBtn.style.color = "var(--success)";
+        savePropertyBtn.style.borderColor = "var(--success)";
+        
+        setTimeout(() => {
+            icon.className = "ph ph-floppy-disk";
+            savePropertyBtn.style.color = "";
+            savePropertyBtn.style.borderColor = "";
+        }, 1500);
+    };
+
+    savePropertyBtn.addEventListener("click", savePropertyId);
+
+    propertyIdInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            savePropertyId();
+        }
+    });
+
     // Initialize App
     loadConversationsFromStorage();
+    loadPropertyId();
     attachSuggestionCardEvents();
 });

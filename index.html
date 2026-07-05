@@ -42,7 +42,12 @@
             <div class="sidebar-footer">
                 <div class="input-group">
                     <label for="propertyIdInput"><i class="ph ph-hash"></i> GA4 Property ID</label>
-                    <input type="text" id="propertyIdInput" placeholder="e.g., 431424603" value="431424603">
+                    <div class="property-input-wrapper">
+                        <input type="text" id="propertyIdInput" placeholder="e.g., 431424603" value="431424603">
+                        <button id="savePropertyBtn" class="save-property-btn" title="Save & Apply Property ID">
+                            <i class="ph ph-floppy-disk"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="status-indicator">
                     <span class="dot"></span>Live Connection
